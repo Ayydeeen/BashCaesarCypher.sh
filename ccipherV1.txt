@@ -1,0 +1,222 @@
+#!/bin/bash
+#Caesar Cipher Script
+#----------------------------------------------------------------
+#VARIABLE DECLARATIONS
+s0=$0
+s1="$1"
+s2="$2"
+s3="$3"
+s4="$4"
+s5="$5"
+s6="$6"
+s7="$7"
+s8="$8"
+k=0
+b=0
+p=0
+e=0
+d=0
+#----------------------------------------------------------------
+#DETERMINING SWITCH VALUES
+cnt0=0 #used for finding current input number
+for i in $s1 $s2 $s3 $s4 $s5 $s6 $s7 $s8 	#for every user input 
+do
+	cnt0=$((cnt0+1)) #increment input count
+
+	#if the input starts with -, check to see if it's a valid switch
+	if [ ${i:0:1} = "-" ]
+	then
+		for c in k p e d b 
+		do
+			if [ ${i:1:1} == $c ] 
+			then
+				case $c in
+				k)
+					k=1
+					case $cnt0 in
+					1)
+						key=$s2
+						;;
+					2)
+						key=$s3
+						;;
+					3)
+						key=$s4
+						;;
+					4)
+						key=$s5
+						;;
+					5)
+						key=$s6
+						;;
+					6)
+						key=$s7
+						;;
+					7)
+						key=$s8
+						;;
+					esac
+					;;
+				p)
+					p=1
+					case $cnt0 in
+					1)
+						perm=$s2
+						;;
+					2)
+						perm=$s3
+						;;
+					3)
+						perm=$s4
+						;;
+					4)
+						perm=$s5
+						;;
+					5)
+						perm=$s6
+						;;
+					6)
+						perm=$s7
+						;;
+					7)
+						perm=$8
+						;;
+					esac
+					;;
+				b)
+					b=1
+					case $cnt0 in
+					1)
+						bsize=$s2
+						;;
+					2)
+						bsize=$s3
+						;;
+					3)
+						bsize=$s4
+						;;
+					4)
+						bsize=$s5
+						;;
+					5)
+						bsize=$s6
+						;;
+					6)
+						bsize=$s7
+						;;
+					7)
+						bsize=$8
+						;;
+					esac
+					;;
+				e)
+					e=1
+					;;
+				d)
+					d=1
+					;;
+				esac
+			fi
+
+		done
+	else
+		#if there is not a "-" indicating a switch see if it a .txt file
+		if [[ $i == *.txt ]]
+		then 
+			plain=$(<$i)	
+			plain=${plain,,}
+		fi
+	fi
+done
+#----------------------------------------------------------------
+#ENSURING SWITCHES WILL NOT CAUSE ERRORS
+if [ $e -eq $d ]; then echo "Choose either -e (encrypt) or -d (decrypt)" && exit; fi
+if [ ${#key} -gt 20 ]; then echo "Key must be shorter than 20 characters" && exit; fi
+if [ $perm -gt 15 ]; then echo "No more than 15 permutations" && exit; fi
+if [ $p = 0 ]; then perm=5; fi
+if [ $b = 0 ]; then bsize=9999999; fi
+if [ $k -eq 0 ]
+then
+	ky=$(bash /bin/genstring) 
+	key="$ky"
+fi
+echo "@""$key"
+#----------------------------------------------------------------
+#CIPHER PLAINTEXT
+key=${key,,}
+alph="abcdefghijklmnopqrstuvwyxz"
+
+#key string to integers
+for (( i=0; i <= ${#key}; i++ ))
+do
+	for (( c=0; c < ${#alph}; c++ ))
+	do
+		if [[ ${key:$i:1} == ${alph:$c:1} ]]
+		then
+			nkey="$nkey $c"		
+			break 1
+		fi
+	done
+done
+
+#repeat for however many permutations specified
+for (( x=0; x < $perm; x++ ))
+do
+	#translate string to integers for math
+	nstring=""
+	for (( i=0; i <= ${#plain}; i++ )) 
+	do
+		for (( c=0; c < ${#alph}; c++ ))
+		do
+			if [[ ${plain:$i:1} == " " ]]
+			then
+				nstring="$nstring X"
+				break 1
+			else
+				if [[ ${plain:$i:1} == ${alph:$c:1} ]]
+				then
+					nstring="$nstring $c"
+					break 1
+				fi
+			fi
+		done
+	done
+	#cipher the string with nkey values
+	cnt1=1 && cnt2=0 && cnt3=0
+	for z in $nstring
+	do
+		if [[ $z == "X" ]]
+		then
+			plain="${plain:0:$cnt2}"" "
+		else
+			if [ $e -eq 1 ]
+			then
+				nv=$(($z + $(echo $nkey | cut -d " " -f $cnt1)))
+				if [[ nv -gt 25 ]]; then nv=$((nv-26)); fi
+				plain="${plain:0:$cnt2}""${alph:$nv:1}"
+				cnt1=$((cnt1+1))
+				cnt3=$((cnt3+1))
+				if [[ $cnt1 -gt ${#key} ]]; then cnt1=1; fi
+				if [[ $cnt3 -ge $bsize ]]
+				then
+					e=0
+					cnt3=0
+				fi
+			else
+				nv=$(($z - $(echo $nkey | cut -d " " -f $cnt1)))
+				if [ $nv -lt 0 ]; then nv=$((nv+26)); fi
+				plain="${plain:0:$cnt2}""${alph:$nv:1}"
+				cnt1=$((cnt1+1))
+				cnt3=$((cnt3+1))
+				if [[ $cnt1 -gt ${#key} ]]; then cnt1=1; fi
+				if [[ $cnt3 -ge $bsize ]]
+				then
+					e=1
+					cnt3=0
+				fi
+			fi		
+		fi
+		cnt2=$((cnt2+1))
+	done
+done
+echo $plain
